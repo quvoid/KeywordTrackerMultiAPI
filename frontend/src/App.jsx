@@ -107,10 +107,8 @@ export default function App() {
       <div style={{ padding: "0 20px" }}>
         <span className="team-label">SCHBANG SEO TEAM</span>
         <h1 className="main-title">
-          <span className="title-white">Keyword</span>
-          <br/>
-          <span className="title-neon">Position</span>
-          <br/>
+          <span className="title-white">Keyword</span><br/>
+          <span className="title-neon">Position</span><br/>
           <span className="title-white">Tracker</span>
         </h1>
         <p className="subtitle">

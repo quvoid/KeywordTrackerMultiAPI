@@ -27,13 +27,22 @@ body {
   min-height: 100vh;
 }
 
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* =============================================
    LAYOUT — narrower, tighter
    ============================================= */
 .app-container {
   width: 100%;
-  max-width: 780px;
-  padding: 56px 32px 80px;
+  max-width: 1200px;
+  padding: 56px 5% 80px;
   display: flex;
   flex-direction: column;
   gap: 0;   /* sections control their own spacing */
@@ -54,12 +63,13 @@ body {
 
 .main-title {
   font-family: var(--font-heading);
-  font-size: clamp(2.4rem, 7vw, 4.2rem);
+  font-size: clamp(3.5rem, 8vw, 6rem);
   font-weight: 800;
-  line-height: 0.9;
+  line-height: 0.75;
   text-transform: uppercase;
-  margin: 0 0 14px 0;
+  margin: 0 0 16px 0;
   letter-spacing: -2px;
+  display: block;
 }
 
 .title-white {
@@ -84,15 +94,17 @@ body {
    API INFO GRID  —  proper cards, not tiny pills
    ============================================= */
 .api-info-header {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 16px;
   padding-top: 18px;
   border-top: 1px solid var(--border-subtle);
 }
 
 .api-badge {
+  flex: 1 1 calc(25% - 8px);
+  min-width: 160px;
   display: flex;
   flex-direction: column;
   gap: 3px;
