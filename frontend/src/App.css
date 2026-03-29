@@ -2,15 +2,15 @@
 
 :root {
   --bg-main: #0a0a0a;
-  --bg-card: #121212;
+  --bg-card: #111111;
   --neon-green: #d4ff00;
   --text-main: #ffffff;
   --text-muted: #888888;
-  --text-subtle: #444444;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-subtle: #3a3a3a;
+  --border-subtle: rgba(255, 255, 255, 0.07);
   --border-focus: var(--neon-green);
   --error: #ff4d4f;
-  
+
   --font-heading: 'Syne', sans-serif;
   --font-body: 'Inter', sans-serif;
 }
@@ -27,34 +27,39 @@ body {
   min-height: 100vh;
 }
 
+/* =============================================
+   LAYOUT — narrower, tighter
+   ============================================= */
 .app-container {
   width: 100%;
-  max-width: 1200px;
-  padding: 80px 40px;
+  max-width: 780px;
+  padding: 56px 32px 80px;
   display: flex;
   flex-direction: column;
-  gap: 50px;
+  gap: 0;   /* sections control their own spacing */
 }
 
-/* --- Header Section --- */
+/* =============================================
+   HEADER
+   ============================================= */
 .team-label {
   color: var(--neon-green);
-  font-size: 11px;
-  letter-spacing: 2px;
+  font-size: 10px;
+  letter-spacing: 3px;
   text-transform: uppercase;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: block;
 }
 
 .main-title {
   font-family: var(--font-heading);
-  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-size: clamp(2.4rem, 7vw, 4.2rem);
   font-weight: 800;
-  line-height: 0.85;
+  line-height: 0.9;
   text-transform: uppercase;
-  margin: 0 0 16px 0;
-  letter-spacing: -3px;
+  margin: 0 0 14px 0;
+  letter-spacing: -2px;
 }
 
 .title-white {
@@ -69,195 +74,314 @@ body {
 
 .subtitle {
   color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1.6;
-  max-width: 600px;
-  margin-top: 0;
-  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 1.65;
+  max-width: 520px;
+  margin: 0 0 20px 0;
 }
 
-/* --- API Info Section --- */
+/* =============================================
+   API INFO GRID  —  proper cards, not tiny pills
+   ============================================= */
 .api-info-header {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-top: 20px;
-  padding-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 18px;
   border-top: 1px solid var(--border-subtle);
 }
 
 .api-badge {
-  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.025);
+  font-family: var(--font-body);
+}
+
+/* API name */
+.api-badge-name {
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  border: 1px solid var(--border-subtle);
-  padding: 4px 10px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
 }
 
-.api-badge span {
+/* Credits / quota line */
+.api-badge-quota {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--neon-green);
-  font-weight: 700;
-  margin-left: 5px;
+  line-height: 1.2;
 }
 
-/* --- Form Container --- */
+/* Calls-per-keyword note */
+.api-badge-note {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #555;
+}
+
+/* Efficient (100 results / 1 call) variant */
+.api-badge--efficient {
+  border-color: rgba(212, 255, 0, 0.2) !important;
+  background: rgba(212, 255, 0, 0.04) !important;
+}
+
+.api-badge--efficient .api-badge-name {
+  color: #a0c800;
+}
+
+/* Warning / one-time pool variant */
+.api-badge--warning {
+  border-color: rgba(250, 140, 0, 0.3) !important;
+  background: rgba(250, 140, 0, 0.04) !important;
+}
+
+.api-badge--warning .api-badge-name {
+  color: #c87000;
+}
+
+.api-badge--warning .api-badge-quota {
+  color: #fa8c00;
+}
+
+/* =============================================
+   FORM
+   ============================================= */
 .tracker-card {
   background: transparent;
   border: none;
-  border-radius: 0;
   padding: 0;
-  box-shadow: none;
+  margin-top: 36px;
 }
 
 .form-group {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-main);
-  margin-bottom: 8px;
+  margin-bottom: 7px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
 }
 
 .label-hint {
-  color: var(--text-subtle);
-  font-size: 11px;
+  color: #444;
+  font-size: 10px;
   text-transform: none;
   font-weight: 400;
+  letter-spacing: 0;
   margin-left: 6px;
 }
 
 .form-input {
   width: 100%;
-  background: var(--bg-main);
-  border: 1px solid var(--border-subtle);
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.09);
   color: var(--text-main);
-  padding: 14px 16px;
-  border-radius: 8px;
+  padding: 15px 18px;
+  border-radius: 9px;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
   box-sizing: border-box;
+}
+
+.form-input::placeholder {
+  color: #3a3a3a;
+  font-size: 13px;
 }
 
 .form-input:focus {
   border-color: var(--border-focus);
+  background: #141414;
 }
 
 .form-textarea {
-  min-height: 120px;
+  min-height: 140px;
   resize: vertical;
+  line-height: 1.7;
 }
 
+/* API keys grid — 2 columns */
 .api-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .api-input {
   background: rgba(255, 255, 255, 0.02);
+  font-size: 13px;
+  padding: 13px 16px;
 }
 
-/* --- ScrapingRobot Advanced Box --- */
-.scraping-robot-section {
-  background: rgba(212, 255, 0, 0.03) !important;
-  border: 1px solid rgba(212, 255, 0, 0.1) !important;
-  border-radius: 12px;
-  padding: 20px !important;
-  margin-top: 24px !important;
+/* =============================================
+   SERPHOUSE WARNING BLOCK
+   ============================================= */
+.serphouse-warning-block {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 9px;
+  border: 1px solid rgba(250, 140, 0, 0.3);
+  background: rgba(250, 140, 0, 0.04);
 }
 
-.robot-label-text {
-  color: var(--neon-green) !important;
-  font-size: 13px !important;
+.serphouse-warning-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.serphouse-warning-label strong {
+  color: #fa8c00;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-/* --- Run Button --- */
+.serphouse-warning-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.serphouse-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #fa8c00;
+  background: rgba(250, 140, 0, 0.12);
+  border: 1px solid rgba(250, 140, 0, 0.25);
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+
+.serphouse-warning-text {
+  color: rgba(250, 140, 0, 0.65);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 0 0 10px 0;
+}
+
+.serphouse-warning-text strong {
+  color: #fa8c00;
+}
+
+/* =============================================
+   SCRAPINGROBOT BOX
+   ============================================= */
+.scraping-robot-section {
+  background: rgba(212, 255, 0, 0.02) !important;
+  border: 1px solid rgba(212, 255, 0, 0.1) !important;
+  border-radius: 9px;
+  padding: 16px !important;
+  margin-top: 20px !important;
+}
+
+.robot-label-text {
+  color: var(--neon-green) !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* =============================================
+   RUN BUTTON
+   ============================================= */
 .run-btn {
   width: 100%;
   background: var(--neon-green);
-  color: #000000;
+  color: #000;
   font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 15px;
-  padding: 16px;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 17px;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   transition: all 0.2s ease;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
 }
 
 .run-btn:hover:not(:disabled) {
   background: #e2ff4c;
   transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(212, 255, 0, 0.25);
 }
 
 .run-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.65;
   cursor: not-allowed;
   background: #8fa800;
 }
 
 .spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
   border-top-color: #000;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* --- Error/Results Banner --- */
+/* =============================================
+   ERROR BANNER
+   ============================================= */
 .error-banner {
-  margin-top: 20px;
+  margin-top: 16px;
   padding: 12px 16px;
-  background: rgba(255, 77, 79, 0.1);
-  border: 1px solid rgba(255, 77, 79, 0.3);
+  background: rgba(255, 77, 79, 0.08);
+  border: 1px solid rgba(255, 77, 79, 0.25);
   color: #ff4d4f;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
-/* --- Results Section --- */
+/* =============================================
+   RESULTS
+   ============================================= */
 .results-section {
-  margin-top: 40px;
+  margin-top: 36px;
   border-top: 1px solid var(--border-subtle);
-  padding-top: 30px;
+  padding-top: 28px;
 }
 
 .results-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .results-title {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 24px;
+  font-size: 22px;
   text-transform: uppercase;
   color: var(--text-main);
   letter-spacing: -0.5px;
@@ -266,11 +390,11 @@ label {
 .copy-button {
   background: transparent;
   color: var(--neon-green);
-  border: 1px solid var(--neon-green);
-  padding: 8px 16px;
+  border: 1px solid rgba(212, 255, 0, 0.4);
+  padding: 7px 14px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -282,7 +406,9 @@ label {
   color: #000;
 }
 
-/* --- Table Styles --- */
+/* =============================================
+   TABLE
+   ============================================= */
 .results-table {
   width: 100%;
   border-collapse: collapse;
@@ -290,11 +416,11 @@ label {
 
 .results-table th {
   text-align: left;
-  padding: 12px;
-  font-size: 11px;
-  color: var(--text-subtle);
+  padding: 10px 12px;
+  font-size: 10px;
+  color: #444;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -303,8 +429,8 @@ label {
 }
 
 .results-table td {
-  padding: 16px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   vertical-align: top;
 }
 
@@ -314,20 +440,23 @@ label {
 
 .row-keyword {
   font-weight: 500;
+  font-size: 14px;
   color: var(--text-main);
 }
 
 .row-detail {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--error);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .row-rank {
   text-align: right;
 }
 
-/* --- Badges --- */
+/* =============================================
+   RANK BADGES
+   ============================================= */
 .rank-badge {
   display: inline-block;
   padding: 4px 12px;
@@ -337,13 +466,17 @@ label {
   letter-spacing: 0.5px;
 }
 
-.rank-green { background: rgba(212, 255, 0, 0.15); color: var(--neon-green); border: 1px solid rgba(212, 255, 0, 0.3); }
-.rank-yellow { background: rgba(250, 173, 20, 0.15); color: #faad14; border: 1px solid rgba(250, 173, 20, 0.3); }
-.rank-red { background: rgba(255, 77, 79, 0.15); color: #ff4d4f; border: 1px solid rgba(255, 77, 79, 0.3); }
-.rank-grey { background: rgba(136, 136, 136, 0.15); color: #aaaaaa; border: 1px solid rgba(136, 136, 136, 0.3); }
+.rank-top   { background: rgba(212, 255, 0, 0.12); color: var(--neon-green); border: 1px solid rgba(212, 255, 0, 0.25); }
+.rank-mid   { background: rgba(250, 173, 20, 0.12); color: #faad14;           border: 1px solid rgba(250, 173, 20, 0.25); }
+.rank-low   { background: rgba(255, 77, 79, 0.12);  color: #ff4d4f;           border: 1px solid rgba(255, 77, 79, 0.25); }
+.rank-error { background: rgba(136, 136, 136, 0.1);  color: #666;              border: 1px solid rgba(136, 136, 136, 0.2); }
 
-@media (max-width: 768px) {
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+@media (max-width: 640px) {
+  .app-container { padding: 36px 18px 60px; }
+  .api-info-header { grid-template-columns: repeat(2, 1fr); }
   .api-grid { grid-template-columns: 1fr; }
-  .main-title { font-size: 3.5rem; }
-  .app-container { padding: 40px 20px; }
+  .main-title { font-size: 2.4rem; letter-spacing: -1px; }
 }

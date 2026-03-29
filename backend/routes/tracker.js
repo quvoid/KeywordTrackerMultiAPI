@@ -16,6 +16,8 @@ function findRank(results, domain) {
 
   const domainLower = domain.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
 
+  let bestRank = null; // Track minimum (best) position found
+
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     const rawUrl = r.link || r.url || r.destination || "";
@@ -23,10 +25,16 @@ function findRank(results, domain) {
 
     if (url.includes(domainLower)) {
       // Use position field if the API provides it, else fall back to 1-based index
-      return typeof r.position === "number" ? r.position : i + 1;
+      const rank = typeof r.position === "number" ? r.position : i + 1;
+      // Keep the LOWEST (best) rank — sitelinks share the main result's domain
+      // but may appear at a higher index; we always want the true organic rank.
+      if (bestRank === null || rank < bestRank) {
+        bestRank = rank;
+      }
     }
   }
-  return "Not Found";
+
+  return bestRank !== null ? bestRank : "Not Found";
 }
 
 // ===================================================
@@ -40,7 +48,7 @@ async function fetchSerper(keyword, apiKey) {
 
   const { data } = await axios.post(
     "https://google.serper.dev/search",
-    { q: keyword, num: 10 },
+    { q: keyword, num: 100, gl: "in", hl: "en" },
     {
       headers: {
         "X-API-KEY": apiKey.trim(),
@@ -56,20 +64,23 @@ async function fetchSerper(keyword, apiKey) {
 
 // ===================================================
 // 2. SearchAPI.io  —  GET https://www.searchapi.io/api/v1/search
-//    Param  : api_key, engine=google, q
+//    Param  : api_key, engine=google_rank_tracking, q
 //    Result : data.organic_results[]  →  result.link
+//    ✅  engine=google_rank_tracking returns up to 100 deduplicated results in 1 call
 // ===================================================
 async function fetchSearchApi(keyword, apiKey) {
   if (!apiKey || !apiKey.trim()) throw new Error("SearchAPI: no API key provided");
 
   const { data } = await axios.get("https://www.searchapi.io/api/v1/search", {
     params: {
-      engine: "google",
+      engine: "google_rank_tracking",   // ← dedicated rank tracking engine
       q: keyword,
       api_key: apiKey.trim(),
-      num: 10
+      gl: "in",
+      hl: "en",
+      num: 100                          // ← 100 results in ONE API call
     },
-    timeout: 15000
+    timeout: 25000
   });
 
   if (data.error) throw new Error(`SearchAPI: ${data.error}`);
@@ -77,25 +88,33 @@ async function fetchSearchApi(keyword, apiKey) {
 }
 
 // ===================================================
-// 3. SerpStack  —  GET https://api.serpstack.com/search
-//    Param  : access_key, query
-//    Result : data.organic_results[]  →  result.url
+// 3. SerpStack  —  GET https://api.serpstack.com/search  (⚠️ HTTPS required)
+//    Param  : access_key, query, gl, hl, num
+//    Result : data.organic_results[]  →  result.url  (NOT result.link)
+//    ✅  num=100 returns top 100 results in ONE API call
 // ===================================================
 async function fetchSerpStack(keyword, apiKey) {
   if (!apiKey || !apiKey.trim()) throw new Error("SerpStack: no API key provided");
 
-  const { data } = await axios.get("http://api.serpstack.com/search", {
+  const { data } = await axios.get("https://api.serpstack.com/search", {  // ← HTTPS
     params: {
       access_key: apiKey.trim(),
       query: keyword,
-      num: 10,
-      type: "web"
+      gl: "in",     // India
+      hl: "en",
+      type: "web",
+      num: 100,     // up to 100 in one call
+      page: 1
     },
-    timeout: 15000
+    timeout: 25000
   });
 
-  if (data.error) throw new Error(`SerpStack: ${JSON.stringify(data.error)}`);
-  return data.organic_results || [];
+  // SerpStack wraps errors as: { success: false, error: { code, type, info } }
+  if (data.success === false || data.error) {
+    throw new Error(`SerpStack: ${data.error?.info || JSON.stringify(data.error)}`);
+  }
+  // SerpStack uses result.url (not result.link)
+  return (data.organic_results || []).map(r => ({ link: r.url, position: r.position }));
 }
 
 // ===================================================
@@ -108,13 +127,142 @@ async function fetchZenserp(keyword, apiKey) {
   if (!apiKey || !apiKey.trim()) throw new Error("Zenserp: no API key provided");
 
   const { data } = await axios.get("https://app.zenserp.com/api/v2/search", {
-    params: { q: keyword, num: 10 },
+    params: { q: keyword, num: 100 },
     headers: { apikey: apiKey.trim() },
-    timeout: 15000
+    timeout: 20000
   });
 
   if (data.error) throw new Error(`Zenserp: ${JSON.stringify(data.error)}`);
   return data.organic || [];
+}
+
+// ===================================================
+// 6. SerpHouse  —  POST https://api.serphouse.com/serp/live
+//    Header : Authorization: Bearer <key>
+//    Body   : { data: { q, domain, loc, lang, device, serp_type, page, verbatim } }
+//    Result : data.results.results.organic[]  →  result.link
+//    ⚠️  ONE-TIME POOL: 4,000 SERP calls — NOT monthly refill!
+// ===================================================
+async function fetchSerpHouse(keyword, apiKey) {
+  if (!apiKey || !apiKey.trim()) throw new Error("SerpHouse: no API key provided");
+
+  const allResults = [];
+
+  // SerpHouse returns 10 results/page — paginate pages 1, 2, 3 = top 30
+  // ⚠️ Each page = 1 SERP credit from the one-time 4,000 pool
+  for (let page = 1; page <= 3; page++) {
+    const { data } = await axios.post(
+      "https://api.serphouse.com/serp/live",
+      {
+        data: {
+          q: keyword,
+          domain: "google.com",
+          loc: "India",
+          lang: "en",
+          device: "desktop",
+          serp_type: "web",
+          page: String(page),
+          verbatim: "0"
+        }
+      },
+      {
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey.trim()}`
+        },
+        timeout: 20000
+      }
+    );
+
+    if (data.error) throw new Error(`SerpHouse: ${JSON.stringify(data.error)}`);
+
+    const organic = data?.results?.results?.organic || data?.results?.organic || [];
+    const normalized = organic.map((r, i) => ({
+      link: r.url || r.link || "",
+      position: r.rank || r.position || ((page - 1) * 10 + i + 1)
+    }));
+    allResults.push(...normalized);
+
+    if (organic.length < 10) break; // Fewer than 10 = no more pages
+    if (page < 3) await new Promise(r => setTimeout(r, 500)); // Polite delay
+  }
+
+  return allResults;
+}
+
+// ===================================================
+// 7. SerpAPI  —  GET https://serpapi.com/search
+//    Param  : api_key, engine=google, q, gl=in (India), hl=en
+//    Result : data.organic_results[]  →  result.link
+//    ✅  Monthly refill: 250 queries/month
+// ===================================================
+async function fetchSerpApi(keyword, apiKey) {
+  if (!apiKey || !apiKey.trim()) throw new Error("SerpAPI: no API key provided");
+
+  const allResults = [];
+
+  // Paginate start 0, 10, 20 to cover top 30 results
+  for (let start = 0; start < 30; start += 10) {
+    const { data } = await axios.get("https://serpapi.com/search", {
+      params: {
+        engine: "google",
+        q: keyword,
+        api_key: apiKey.trim(),
+        gl: "in",      // India
+        hl: "en",
+        google_domain: "google.co.in",
+        num: 10,
+        start
+      },
+      timeout: 20000
+    });
+
+    if (data.error) throw new Error(`SerpAPI: ${data.error}`);
+    const organic = data.organic_results || [];
+    allResults.push(...organic.map(r => ({ link: r.link, position: r.position })));
+    if (organic.length < 10) break; // No more pages
+    if (start < 20) await new Promise(r => setTimeout(r, 400));
+  }
+
+  return allResults;
+}
+
+// ===================================================
+// 8. Scrape.do  —  GET https://api.scrape.do/plugin/google/search
+//    Param  : token, q, gl=in (India), hl=en, google_domain=google.co.in
+//    Result : data.organic_results[]  →  { link, position }
+//    ✅  Uses scrape.do's dedicated Google Search API plugin (structured JSON)
+//    ✅  No HTML parsing needed — clean structured output
+// ===================================================
+async function fetchScrapeDo(keyword, apiKey) {
+  if (!apiKey || !apiKey.trim()) throw new Error("Scrape.do: no API key provided");
+
+  const allResults = [];
+
+  // Paginate start 0, 10, 20 to cover top 30 results
+  for (let start = 0; start < 30; start += 10) {
+    const { data } = await axios.get("https://api.scrape.do/plugin/google/search", {
+      params: {
+        token: apiKey.trim(),
+        q: keyword,
+        gl: "in",              // India
+        hl: "en",
+        google_domain: "google.co.in",
+        device: "desktop",
+        start
+      },
+      timeout: 30000
+    });
+
+    if (data.error) throw new Error(`Scrape.do: ${data.message || JSON.stringify(data.error)}`);
+    const organic = data.organic_results || [];
+    allResults.push(...organic.map(r => ({ link: r.link, position: r.position })));
+    if (organic.length < 10) break; // No more pages
+    if (start < 20) await new Promise(r => setTimeout(r, 400));
+  }
+
+  return allResults;
 }
 
 // ===================================================
@@ -203,10 +351,13 @@ async function scrapeGoogleDeep(keyword, domain, apiKey) {
 // ===================================================
 function buildCandidates(safeApiKeys) {
   return [
-    { name: "Serper",     key: safeApiKeys.serper,    fn: fetchSerper    },
-    { name: "SearchAPI",  key: safeApiKeys.serpapi,   fn: fetchSearchApi },
-    { name: "SerpStack",  key: safeApiKeys.serpstack,  fn: fetchSerpStack },
-    { name: "Zenserp",   key: safeApiKeys.zenserp,   fn: fetchZenserp   }
+    { name: "Serper",     key: safeApiKeys.serper,      fn: fetchSerper    },
+    { name: "SearchAPI",  key: safeApiKeys.serpapi,     fn: fetchSearchApi },
+    { name: "SerpStack",  key: safeApiKeys.serpstack,   fn: fetchSerpStack },
+    { name: "Zenserp",   key: safeApiKeys.zenserp,     fn: fetchZenserp   },
+    { name: "SerpHouse", key: safeApiKeys.serphouse,   fn: fetchSerpHouse },
+    { name: "SerpAPI",   key: safeApiKeys.serpApiKey,  fn: fetchSerpApi   },
+    { name: "Scrape.do", key: safeApiKeys.scrapedo,    fn: fetchScrapeDo  }
   ].filter(c => c.key && c.key.trim());
 }
 
@@ -255,16 +406,19 @@ router.post("/run-direct", async (req, res) => {
     }
 
     const safeApiKeys = {
-      serper:    api_keys.serper    ?? "",
-      serpapi:   api_keys.serpapi   ?? "",
-      serpstack: api_keys.serpstack ?? "",
-      zenserp:   api_keys.zenserp  ?? ""
+      serper:      api_keys.serper      ?? "",
+      serpapi:     api_keys.serpapi     ?? "",
+      serpstack:   api_keys.serpstack   ?? "",
+      zenserp:     api_keys.zenserp     ?? "",
+      serphouse:   api_keys.serphouse   ?? "",
+      serpApiKey:  api_keys.serpApiKey  ?? "",
+      scrapedo:    api_keys.scrapedo    ?? ""
     };
 
     const candidates = buildCandidates(safeApiKeys);
     if (candidates.length === 0) {
       return res.status(400).json({
-        error: "Please provide at least one API key (Serper, SearchAPI, SerpStack, or Zenserp)"
+        error: "Please provide at least one API key (Serper, SearchAPI, SerpStack, Zenserp, SerpHouse, SerpAPI, or Scrape.do)"
       });
     }
 

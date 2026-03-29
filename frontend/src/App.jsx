@@ -13,7 +13,10 @@ export default function App() {
     serper: "",
     serpapi: "",
     serpstack: "",
-    zenserp: ""
+    zenserp: "",
+    serphouse: "",
+    serpApiKey: "",
+    scrapedo: ""
   });
 
   const [useScrapingRobot, setUseScrapingRobot] = useState(false);
@@ -52,10 +55,13 @@ export default function App() {
       domain: domain.trim(),
       keywords: keywordList,
       api_keys: {
-        serper:    apiKeys.serper    || "",
-        serpapi:   apiKeys.serpapi   || "",
-        serpstack: apiKeys.serpstack || "",
-        zenserp:   apiKeys.zenserp  || ""
+        serper:     apiKeys.serper     || "",
+        serpapi:    apiKeys.serpapi    || "",
+        serpstack:  apiKeys.serpstack  || "",
+        zenserp:    apiKeys.zenserp    || "",
+        serphouse:  apiKeys.serphouse  || "",
+        serpApiKey: apiKeys.serpApiKey || "",
+        scrapedo:   apiKeys.scrapedo   || ""
       },
       useScrapingRobot,
       scrapingRobotKey: useScrapingRobot ? scrapingRobotKey.trim() : ""
@@ -112,11 +118,14 @@ export default function App() {
         </p>
 
         <div className="api-info-header">
-          <div className="api-badge">Serper <span>2,500 Free</span></div>
-          <div className="api-badge">SearchAPI <span>100 Free</span></div>
-          <div className="api-badge">SerpStack <span>1,000 Free</span></div>
-          <div className="api-badge">Zenserp <span>50 Free</span></div>
-          <div className="api-badge">ScrapingRobot <span>5,000 Credits</span></div>
+          <div className="api-badge api-badge--efficient"><div className="api-badge-name">Serper</div><div className="api-badge-quota">2,500 / mo</div><div className="api-badge-note">100 results · 1 call</div></div>
+          <div className="api-badge api-badge--efficient"><div className="api-badge-name">SearchAPI</div><div className="api-badge-quota">100 / mo</div><div className="api-badge-note">100 results · 1 call</div></div>
+          <div className="api-badge api-badge--efficient"><div className="api-badge-name">SerpStack</div><div className="api-badge-quota">1,000 / mo</div><div className="api-badge-note">100 results · 1 call</div></div>
+          <div className="api-badge api-badge--efficient"><div className="api-badge-name">Zenserp</div><div className="api-badge-quota">50 / mo</div><div className="api-badge-note">100 results · 1 call</div></div>
+          <div className="api-badge"><div className="api-badge-name">ScrapingRobot</div><div className="api-badge-quota">5,000 credits</div><div className="api-badge-note">Deep HTML search</div></div>
+          <div className="api-badge"><div className="api-badge-name">SerpAPI</div><div className="api-badge-quota">250 / mo</div><div className="api-badge-note">India · 3 calls/kw</div></div>
+          <div className="api-badge"><div className="api-badge-name">Scrape.do</div><div className="api-badge-quota">1,000 / mo</div><div className="api-badge-note">India · 3 calls/kw</div></div>
+          <div className="api-badge api-badge--warning"><div className="api-badge-name">⚠ SerpHouse</div><div className="api-badge-quota">4,000 ONE-TIME</div><div className="api-badge-note">Not monthly · 3 calls/kw</div></div>
         </div>
       </div>
 
@@ -150,10 +159,12 @@ export default function App() {
             <label>API Keys <span className="label-hint">(leave blank to skip)</span></label>
             <div className="api-grid">
               {[
-                { key: "serper",    label: "Serper" },
-                { key: "serpapi",   label: "SearchAPI" },
-                { key: "serpstack", label: "SerpStack" },
-                { key: "zenserp",  label: "Zenserp" }
+                { key: "serper",    label: "Serper — 2,500/mo · 100 results per call" },
+                { key: "serpapi",   label: "SearchAPI (Rank Tracking) — 100/mo · 100 results per call" },
+                { key: "serpstack", label: "SerpStack — 1,000/mo · 100 results per call" },
+                { key: "zenserp",  label: "Zenserp — 50/mo · 100 results per call" },
+                { key: "serpApiKey", label: "SerpAPI — 250/mo · India · 3 calls/keyword" },
+                { key: "scrapedo", label: "Scrape.do — 1,000/mo · India · 3 calls/keyword" }
               ].map(({ key, label }) => (
                 <input
                   key={key}
@@ -163,6 +174,25 @@ export default function App() {
                   onChange={(e) => handleApiKey(key, e.target.value)}
                 />
               ))}
+            </div>
+
+            {/* SerpHouse — separate with warning */}
+            <div className="serphouse-warning-block">
+              <div className="serphouse-warning-label">
+                <span className="serphouse-warning-icon">⚠️</span>
+                <strong>SerpHouse API Key</strong>
+                <span className="serphouse-badge">ONE-TIME · 4,000 SERP calls · NOT monthly</span>
+              </div>
+              <p className="serphouse-warning-text">
+                This key has a <strong>one-time</strong> pool of 4,000 SERP calls — unlike the other APIs which refill monthly.
+                Use it sparingly and only when other APIs are exhausted.
+              </p>
+              <input
+                className="form-input api-input"
+                placeholder="SerpHouse API Key (one-time 4,000 calls)"
+                value={apiKeys.serphouse}
+                onChange={(e) => handleApiKey("serphouse", e.target.value)}
+              />
             </div>
           </div>
 
