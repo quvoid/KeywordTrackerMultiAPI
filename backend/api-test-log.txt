@@ -1,0 +1,11 @@
+--- Testing SERPER ---
+✅ Success, organic results: 10
+
+--- Testing SEARCHAPI.IO ---
+❌ Error: {"error":"Invalid API key."}
+
+--- Testing SERPSTACK ---
+❌ Error: "read ECONNRESET"
+
+--- Testing ZENSERP ---
+❌ Error: {"error":"Not enough requests."}

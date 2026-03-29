@@ -1,0 +1,21 @@
+Analyzing .MjjYud blocks:
+[RANK 1] Block 2: Domain=groww.in
+Main Link: https://groww.in/stocks/intraday
+[RANK 2] Block 4: Domain=screener.in
+Main Link: https://www.screener.in/screens/486756/intraday-stock-list/?order=asc
+[RANK 3] Block 8: Domain=icicidirect.com
+Main Link: https://www.icicidirect.com/equity/market-today/top-gainers/nse/nifty-50/intraday
+[RANK 4] Block 12: Domain=kotakneo.com
+Main Link: https://www.kotakneo.com/stock-research-recommendations/equity/intraday/
+[RANK 5] Block 14: Domain=nseindia.com
+Main Link: https://www.nseindia.com/market-data/most-active-equities
+[RANK 6] Block 16: Domain=bajajfinserv.in
+Main Link: https://www.bajajfinserv.in/intraday-stock-list
+[RANK 7] Block 18: Domain=dhan.co
+Main Link: https://dhan.co/stocks/market/intraday-stocks/
+[RANK 8] Block 20: Domain=web.stockedge.com
+Main Link: https://web.stockedge.com/trending-stocks
+[RANK 9] Block 22: Domain=intradayscreener.com
+Main Link: https://intradayscreener.com/
+[RANK 10] Block 24: Domain=mstock.com
+Main Link: https://www.mstock.com/equity-trading/intraday-stock-lists

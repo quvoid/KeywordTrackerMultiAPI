@@ -1,0 +1,322 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg-main: #0a0a0a;
+  --bg-card: #121212;
+  --neon-green: #d4ff00;
+  --text-main: #ffffff;
+  --text-muted: #888888;
+  --text-subtle: #444444;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-focus: var(--neon-green);
+  --error: #ff4d4f;
+  
+  --font-heading: 'Syne', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1200px;
+  padding: 80px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+}
+
+/* --- Header Section --- */
+.team-label {
+  color: var(--neon-green);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.main-title {
+  font-family: var(--font-heading);
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 800;
+  line-height: 1.05;
+  text-transform: uppercase;
+  margin: 0 0 24px 0;
+  letter-spacing: -2px;
+}
+
+.title-white {
+  color: var(--text-main);
+  display: block;
+}
+
+.title-neon {
+  color: var(--neon-green);
+  display: block;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* --- Form Container --- */
+.tracker-card {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.label-hint {
+  color: var(--text-subtle);
+  font-size: 11px;
+  text-transform: none;
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.form-input {
+  width: 100%;
+  background: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: var(--border-focus);
+}
+
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.api-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.api-input {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* --- ScrapingRobot Advanced Box --- */
+.scraping-robot-section {
+  background: rgba(212, 255, 0, 0.03) !important;
+  border: 1px solid rgba(212, 255, 0, 0.1) !important;
+  border-radius: 12px;
+  padding: 20px !important;
+  margin-top: 24px !important;
+}
+
+.robot-label-text {
+  color: var(--neon-green) !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* --- Run Button --- */
+.run-btn {
+  width: 100%;
+  background: var(--neon-green);
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.run-btn:hover:not(:disabled) {
+  background: #e2ff4c;
+  transform: translateY(-1px);
+}
+
+.run-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: #8fa800;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Error/Results Banner --- */
+.error-banner {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.3);
+  color: #ff4d4f;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* --- Results Section --- */
+.results-section {
+  margin-top: 40px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 30px;
+}
+
+.results-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.results-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  text-transform: uppercase;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.copy-button {
+  background: transparent;
+  color: var(--neon-green);
+  border: 1px solid var(--neon-green);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.copy-button:hover {
+  background: var(--neon-green);
+  color: #000;
+}
+
+/* --- Table Styles --- */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.results-table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 11px;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.results-table th:last-child {
+  text-align: right;
+}
+
+.results-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: top;
+}
+
+.results-table tr:last-child td {
+  border-bottom: none;
+}
+
+.row-keyword {
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.row-detail {
+  font-size: 12px;
+  color: var(--error);
+  margin-top: 4px;
+}
+
+.row-rank {
+  text-align: right;
+}
+
+/* --- Badges --- */
+.rank-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.rank-green { background: rgba(212, 255, 0, 0.15); color: var(--neon-green); border: 1px solid rgba(212, 255, 0, 0.3); }
+.rank-yellow { background: rgba(250, 173, 20, 0.15); color: #faad14; border: 1px solid rgba(250, 173, 20, 0.3); }
+.rank-red { background: rgba(255, 77, 79, 0.15); color: #ff4d4f; border: 1px solid rgba(255, 77, 79, 0.3); }
+.rank-grey { background: rgba(136, 136, 136, 0.15); color: #aaaaaa; border: 1px solid rgba(136, 136, 136, 0.3); }
+
+@media (max-width: 768px) {
+  .api-grid { grid-template-columns: 1fr; }
+  .main-title { font-size: 3.5rem; }
+  .app-container { padding: 40px 20px; }
+}
