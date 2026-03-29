@@ -49,12 +49,12 @@ body {
 
 .main-title {
   font-family: var(--font-heading);
-  font-size: clamp(4rem, 10vw, 8rem);
+  font-size: clamp(3rem, 9vw, 6.5rem);
   font-weight: 800;
-  line-height: 1.05;
+  line-height: 0.85;
   text-transform: uppercase;
-  margin: 0 0 24px 0;
-  letter-spacing: -2px;
+  margin: 0 0 16px 0;
+  letter-spacing: -3px;
 }
 
 .title-white {
@@ -74,6 +74,33 @@ body {
   max-width: 600px;
   margin-top: 0;
   margin-bottom: 20px;
+}
+
+/* --- API Info Section --- */
+.api-info-header {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.api-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.api-badge span {
+  color: var(--neon-green);
+  font-weight: 700;
+  margin-left: 5px;
 }
 
 /* --- Form Container --- */

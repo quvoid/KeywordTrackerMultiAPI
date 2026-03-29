@@ -110,6 +110,14 @@ export default function App() {
         <p className="subtitle">
           Enter your domain, keywords, and API keys to instantly detect real-time SEO rankings across engines — without touching your original sheets.
         </p>
+
+        <div className="api-info-header">
+          <div className="api-badge">Serper <span>2,500 Free</span></div>
+          <div className="api-badge">SearchAPI <span>100 Free</span></div>
+          <div className="api-badge">SerpStack <span>1,000 Free</span></div>
+          <div className="api-badge">Zenserp <span>50 Free</span></div>
+          <div className="api-badge">ScrapingRobot <span>5,000 Credits</span></div>
+        </div>
       </div>
 
       <div className="tracker-card">
