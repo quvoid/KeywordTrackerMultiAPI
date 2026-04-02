@@ -5,18 +5,12 @@ const cheerio = require("cheerio");
 
 // ===================================================
 // Helper: find the rank of a domain in SERP results
-// Handles different field names across APIs:
-//   Serper / SearchAPI  → result.link
-//   SerpStack           → result.url
-//   Zenserp             → result.url || result.destination
-// Also uses result.position when present (authoritative rank)
 // ===================================================
-function findRank(results, domain) {
+function findRank(results, domain, offset = 0) {
   if (!Array.isArray(results) || results.length === 0) return "Not Found";
 
   const domainLower = domain.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
-
-  let bestRank = null; // Track minimum (best) position found
+  let bestRank = null;
 
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
@@ -24,10 +18,10 @@ function findRank(results, domain) {
     const url = rawUrl.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
 
     if (url.includes(domainLower)) {
-      // Use position field if the API provides it, else fall back to 1-based index
-      const rank = typeof r.position === "number" ? r.position : i + 1;
-      // Keep the LOWEST (best) rank — sitelinks share the main result's domain
-      // but may appear at a higher index; we always want the true organic rank.
+      // Force calculation using mathematical offset because some APIs (like Serper)
+      // reset 'position' to 1 on every parsed page, corrupting deep rank results.
+      const rank = offset + i + 1;
+      
       if (bestRank === null || rank < bestRank) {
         bestRank = rank;
       }
@@ -38,268 +32,202 @@ function findRank(results, domain) {
 }
 
 // ===================================================
-// 1. Serper  —  POST https://google.serper.dev/search
-//    Header : X-API-KEY
-//    Body   : { q, num }
-//    Result : data.organic[]  →  result.link
+// 1. Serper
 // ===================================================
-async function fetchSerper(keyword, apiKey) {
+async function fetchSerper(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("Serper: no API key provided");
 
-  const { data } = await axios.post(
-    "https://google.serper.dev/search",
-    { q: keyword, num: 100, gl: "in", hl: "en" },
-    {
-      headers: {
-        "X-API-KEY": apiKey.trim(),
-        "Content-Type": "application/json"
-      },
-      timeout: 15000
-    }
-  );
+  // Serper pagination via 'page' parameter (1-10) for 100 results max
+  for (let page = 1; page <= 10; page++) {
+    const { data } = await axios.post(
+      "https://google.serper.dev/search",
+      { q: keyword, num: 10, page: page, gl: "in", hl: "en" },
+      { headers: { "X-API-KEY": apiKey.trim(), "Content-Type": "application/json" }, timeout: 15000 }
+    );
+    if (data.error) throw new Error(`Serper: ${data.error}`);
 
-  if (data.error) throw new Error(`Serper: ${data.error}`);
-  return data.organic || [];
+    const organic = data.organic || [];
+    const rank = findRank(organic, domain, (page - 1) * 10);
+    
+    // Early exit
+    if (rank !== "Not Found") return rank;
+    if (organic.length < 10) break;
+
+    if (page < 10) await new Promise(r => setTimeout(r, 800)); // Sleep between pages
+  }
+  return "Not Found";
 }
 
 // ===================================================
-// 2. SearchAPI.io  —  GET https://www.searchapi.io/api/v1/search
-//    Param  : api_key, engine=google_rank_tracking, q
-//    Result : data.organic_results[]  →  result.link
-//    ✅  engine=google_rank_tracking returns up to 100 deduplicated results in 1 call
+// 2. SearchAPI.io (No pagination needed, native 100)
 // ===================================================
-async function fetchSearchApi(keyword, apiKey) {
+async function fetchSearchApi(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("SearchAPI: no API key provided");
 
   const { data } = await axios.get("https://www.searchapi.io/api/v1/search", {
-    params: {
-      engine: "google_rank_tracking",   // ← dedicated rank tracking engine
-      q: keyword,
-      api_key: apiKey.trim(),
-      gl: "in",
-      hl: "en",
-      num: 100                          // ← 100 results in ONE API call
-    },
+    params: { engine: "google_rank_tracking", q: keyword, api_key: apiKey.trim(), gl: "in", hl: "en", num: 100 },
     timeout: 25000
   });
 
   if (data.error) throw new Error(`SearchAPI: ${data.error}`);
-  return data.organic_results || [];
+  return findRank(data.organic_results || [], domain);
 }
 
 // ===================================================
-// 3. SerpStack  —  GET https://api.serpstack.com/search  (⚠️ HTTPS required)
-//    Param  : access_key, query, gl, hl, num
-//    Result : data.organic_results[]  →  result.url  (NOT result.link)
-//    ✅  num=100 returns top 100 results in ONE API call
+// 3. SerpStack
 // ===================================================
-async function fetchSerpStack(keyword, apiKey) {
+async function fetchSerpStack(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("SerpStack: no API key provided");
 
-  const { data } = await axios.get("https://api.serpstack.com/search", {  // ← HTTPS
-    params: {
-      access_key: apiKey.trim(),
-      query: keyword,
-      gl: "in",     // India
-      hl: "en",
-      type: "web",
-      num: 100,     // up to 100 in one call
-      page: 1
-    },
-    timeout: 25000
-  });
+  for (let page = 1; page <= 10; page++) {
+    const { data } = await axios.get("https://api.serpstack.com/search", {
+      params: { access_key: apiKey.trim(), query: keyword, gl: "in", hl: "en", type: "web", num: 10, page: page },
+      timeout: 25000
+    });
 
-  // SerpStack wraps errors as: { success: false, error: { code, type, info } }
-  if (data.success === false || data.error) {
-    throw new Error(`SerpStack: ${data.error?.info || JSON.stringify(data.error)}`);
+    if (data.success === false || data.error) {
+      throw new Error(`SerpStack: ${data.error?.info || JSON.stringify(data.error)}`);
+    }
+
+    const organic = (data.organic_results || []).map(r => ({ link: r.url, position: r.position }));
+    const rank = findRank(organic, domain, (page - 1) * 10);
+    
+    if (rank !== "Not Found") return rank;
+    if (organic.length < 10) break;
+    
+    if (page < 10) await new Promise(r => setTimeout(r, 800));
   }
-  // SerpStack uses result.url (not result.link)
-  return (data.organic_results || []).map(r => ({ link: r.url, position: r.position }));
+  return "Not Found";
 }
 
 // ===================================================
-// 4. Zenserp  —  GET https://app.zenserp.com/api/v2/search
-//    Header : apikey
-//    Param  : q
-//    Result : data.organic[]  →  result.url || result.destination
+// 4. Zenserp
 // ===================================================
-async function fetchZenserp(keyword, apiKey) {
+async function fetchZenserp(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("Zenserp: no API key provided");
 
-  const { data } = await axios.get("https://app.zenserp.com/api/v2/search", {
-    params: { q: keyword, num: 100 },
-    headers: { apikey: apiKey.trim() },
-    timeout: 20000
-  });
+  for (let start = 0; start < 100; start += 10) {
+    const { data } = await axios.get("https://app.zenserp.com/api/v2/search", {
+      params: { q: keyword, num: 10, start: start, gl: "in", hl: "en" },
+      headers: { apikey: apiKey.trim() },
+      timeout: 20000
+    });
 
-  if (data.error) throw new Error(`Zenserp: ${JSON.stringify(data.error)}`);
-  return data.organic || [];
+    if (data.error) throw new Error(`Zenserp: ${JSON.stringify(data.error)}`);
+
+    const organic = data.organic || [];
+    const rank = findRank(organic, domain, start);
+    
+    if (rank !== "Not Found") return rank;
+    if (organic.length < 10) break;
+    
+    if (start < 90) await new Promise(r => setTimeout(r, 800));
+  }
+  return "Not Found";
 }
 
 // ===================================================
-// 6. SerpHouse  —  POST https://api.serphouse.com/serp/live
-//    Header : Authorization: Bearer <key>
-//    Body   : { data: { q, domain, loc, lang, device, serp_type, page, verbatim } }
-//    Result : data.results.results.organic[]  →  result.link
-//    ⚠️  ONE-TIME POOL: 4,000 SERP calls — NOT monthly refill!
+// 5. SerpHouse
 // ===================================================
-async function fetchSerpHouse(keyword, apiKey) {
+async function fetchSerpHouse(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("SerpHouse: no API key provided");
 
-  const allResults = [];
-
-  // SerpHouse returns 10 results/page — paginate pages 1, 2, 3 = top 30
-  // ⚠️ Each page = 1 SERP credit from the one-time 4,000 pool
-  for (let page = 1; page <= 3; page++) {
+  for (let page = 1; page <= 10; page++) {
     const { data } = await axios.post(
       "https://api.serphouse.com/serp/live",
-      {
-        data: {
-          q: keyword,
-          domain: "google.com",
-          loc: "India",
-          lang: "en",
-          device: "desktop",
-          serp_type: "web",
-          page: String(page),
-          verbatim: "0"
-        }
-      },
-      {
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-          authorization: `Bearer ${apiKey.trim()}`
-        },
-        timeout: 20000
-      }
+      { data: { q: keyword, domain: "google.com", loc: "India", lang: "en", device: "desktop", serp_type: "web", page: String(page), verbatim: "0" } },
+      { headers: { accept: "application/json", "content-type": "application/json", authorization: `Bearer ${apiKey.trim()}` }, timeout: 20000 }
     );
 
     if (data.error) throw new Error(`SerpHouse: ${JSON.stringify(data.error)}`);
 
     const organic = data?.results?.results?.organic || data?.results?.organic || [];
-    const normalized = organic.map((r, i) => ({
-      link: r.url || r.link || "",
-      position: r.rank || r.position || ((page - 1) * 10 + i + 1)
-    }));
-    allResults.push(...normalized);
+    const normalized = organic.map((r, i) => ({ link: r.url || r.link || "", position: r.rank || r.position || ((page - 1) * 10 + i + 1) }));
+    
+    const rank = findRank(normalized, domain, (page - 1) * 10);
+    if (rank !== "Not Found") return rank;
 
-    if (organic.length < 10) break; // Fewer than 10 = no more pages
-    if (page < 3) await new Promise(r => setTimeout(r, 500)); // Polite delay
+    if (organic.length < 10) break;
+    if (page < 10) await new Promise(r => setTimeout(r, 1000));
   }
-
-  return allResults;
+  return "Not Found";
 }
 
 // ===================================================
-// 7. SerpAPI  —  GET https://serpapi.com/search
-//    Param  : api_key, engine=google, q, gl=in (India), hl=en
-//    Result : data.organic_results[]  →  result.link
-//    ✅  Monthly refill: 250 queries/month
+// 6. SerpAPI
 // ===================================================
-async function fetchSerpApi(keyword, apiKey) {
+async function fetchSerpApi(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("SerpAPI: no API key provided");
 
-  const allResults = [];
-
-  // Paginate start 0, 10, 20 to cover top 30 results
-  for (let start = 0; start < 30; start += 10) {
+  for (let start = 0; start < 100; start += 10) {
     const { data } = await axios.get("https://serpapi.com/search", {
-      params: {
-        engine: "google",
-        q: keyword,
-        api_key: apiKey.trim(),
-        gl: "in",      // India
-        hl: "en",
-        google_domain: "google.co.in",
-        num: 10,
-        start
-      },
+      params: { engine: "google", q: keyword, api_key: apiKey.trim(), gl: "in", hl: "en", google_domain: "google.co.in", num: 10, start },
       timeout: 20000
     });
 
     if (data.error) throw new Error(`SerpAPI: ${data.error}`);
+    
     const organic = data.organic_results || [];
-    allResults.push(...organic.map(r => ({ link: r.link, position: r.position })));
-    if (organic.length < 10) break; // No more pages
-    if (start < 20) await new Promise(r => setTimeout(r, 400));
+    const rank = findRank(organic, domain, start);
+    
+    if (rank !== "Not Found") return rank;
+    if (organic.length < 10) break;
+    
+    if (start < 90) await new Promise(r => setTimeout(r, 600));
   }
-
-  return allResults;
+  return "Not Found";
 }
 
 // ===================================================
-// 8. Scrape.do  —  GET https://api.scrape.do/plugin/google/search
-//    Param  : token, q, gl=in (India), hl=en, google_domain=google.co.in
-//    Result : data.organic_results[]  →  { link, position }
-//    ✅  Uses scrape.do's dedicated Google Search API plugin (structured JSON)
-//    ✅  No HTML parsing needed — clean structured output
+// 7. Scrape.do
 // ===================================================
-async function fetchScrapeDo(keyword, apiKey) {
+async function fetchScrapeDo(keyword, apiKey, domain) {
   if (!apiKey || !apiKey.trim()) throw new Error("Scrape.do: no API key provided");
 
-  const allResults = [];
-
-  // Paginate start 0, 10, 20 to cover top 30 results
-  for (let start = 0; start < 30; start += 10) {
+  for (let start = 0; start < 100; start += 10) {
     const { data } = await axios.get("https://api.scrape.do/plugin/google/search", {
-      params: {
-        token: apiKey.trim(),
-        q: keyword,
-        gl: "in",              // India
-        hl: "en",
-        google_domain: "google.co.in",
-        device: "desktop",
-        start
-      },
+      params: { token: apiKey.trim(), q: keyword, gl: "in", hl: "en", google_domain: "google.co.in", device: "desktop", start },
       timeout: 30000
     });
 
     if (data.error) throw new Error(`Scrape.do: ${data.message || JSON.stringify(data.error)}`);
+    
     const organic = data.organic_results || [];
-    allResults.push(...organic.map(r => ({ link: r.link, position: r.position })));
-    if (organic.length < 10) break; // No more pages
-    if (start < 20) await new Promise(r => setTimeout(r, 400));
+    const rank = findRank(organic, domain, start);
+    
+    if (rank !== "Not Found") return rank;
+    if (organic.length < 10) break;
+    
+    if (start < 90) await new Promise(r => setTimeout(r, 600));
   }
-
-  return allResults;
+  return "Not Found";
 }
 
 // ===================================================
-// 5. ScrapingRobot (Deep Search Google UI)
+// 8. ScrapingRobot
 // ===================================================
 async function scrapeGoogleDeep(keyword, domain, apiKey) {
   if (!apiKey || !apiKey.trim()) throw new Error("ScrapingRobot: no API key provided");
 
-  const maxPages = 3; // Check top 3 pages (30 results)
+  const maxPages = 10;
   let currentRank = 0;
   const domainLower = domain.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
 
   for (let page = 0; page < maxPages; page++) {
     const start = page * 10;
-    // We scrape Google Desktop India (gl=in) since keywords are Indian market
     const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&start=${start}&num=10&hl=en&gl=in`;
-    
     const srUrl = `https://api.scrapingrobot.com/?token=${apiKey.trim()}&render=false&url=${encodeURIComponent(targetUrl)}`;
     
-    // timeout 45s because ScrapingRobot might take a while to solve captchas
     const { data } = await axios.get(srUrl, { timeout: 45000 });
-    
-    // ScrapingRobot can return JSON { result: "<html>..." }
     const htmlStr = data.result || data.html || (typeof data === "string" ? data : JSON.stringify(data));
     const $ = cheerio.load(htmlStr);
     
     let foundOnPage = false;
     let rankFound = -1;
-
-    // Extract semantic SERP blocks. Google Mobile DOM wraps each organic result in div.MjjYud or similar.
-    // If .MjjYud exists, it perfectly aligns 1 block = 1 rank for the human eye, eliminating sitelink noise.
     let pageLinks = [];
     let semanticBlocks = $("div.MjjYud");
     
-    // Fallback if MjjYud isn't present, try generic fallback
     if (semanticBlocks.length === 0) {
-      // Extremely rare in current DOM, fallback to legacy tracking
       $("a[href^='http']").each((i, el) => {
         const h = $(el).attr("href");
         if (!h.includes("google.") && !h.includes("youtube.") && !h.includes("blogger.com")) {
@@ -316,15 +244,10 @@ async function scrapeGoogleDeep(keyword, domain, apiKey) {
             if ($(el).text().trim().length > 5) linksInBlock.push(h);
           }
         });
-        
-        if (linksInBlock.length > 0) {
-          // Take the primary structural link of this block
-          pageLinks.push(linksInBlock[0]);
-        }
+        if (linksInBlock.length > 0) pageLinks.push(linksInBlock[0]);
       });
     }
 
-    // Now scan through collected organic links (1 per visual rank block)
     for (const link of pageLinks) {
       currentRank++;
       const urlLower = link.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
@@ -337,18 +260,13 @@ async function scrapeGoogleDeep(keyword, domain, apiKey) {
 
     if (foundOnPage) return rankFound;
 
-    // Polite delay for ScrapingRobot
-    await new Promise(r => setTimeout(r, 1000));
+    if (pageLinks.length === 0) break; // If Google completely blocked us, stop
+    if (page < maxPages - 1) await new Promise(r => setTimeout(r, 1000));
   }
   
-  return "Not Found (Top 30)";
+  return "Not Found";
 }
 
-// ===================================================
-// Map each api_keys field to its fetcher function
-// Only candidates where the key is non-empty are used
-// Round-robin across available APIs per keyword
-// ===================================================
 function buildCandidates(safeApiKeys) {
   return [
     { name: "Serper",     key: safeApiKeys.serper,      fn: fetchSerper    },
@@ -361,14 +279,10 @@ function buildCandidates(safeApiKeys) {
   ].filter(c => c.key && c.key.trim());
 }
 
-// ===== DIRECT TRACK (NO DB) =====
 router.post("/run-direct", async (req, res) => {
   try {
-    console.log("[/run-direct] req.body:", JSON.stringify(req.body, null, 2));
-
     const { domain, keywords, api_keys = {}, useScrapingRobot, scrapingRobotKey } = req.body;
 
-    // --- Granular validation ---
     if (!domain || typeof domain !== "string" || !domain.trim()) {
       return res.status(400).json({ error: "Missing domain" });
     }
@@ -376,34 +290,23 @@ router.post("/run-direct", async (req, res) => {
       return res.status(400).json({ error: "Missing keywords" });
     }
 
-    // Branch logic: if ScrapingRobot is toggled on
     if (useScrapingRobot) {
-      if (!scrapingRobotKey || !scrapingRobotKey.trim()) {
-        return res.status(400).json({ error: "Missing ScrapingRobot API Key" });
-      }
-
-      console.log(`[/run-direct] Using ScrapingRobot for ${keywords.length} keywords`);
+      if (!scrapingRobotKey || !scrapingRobotKey.trim()) return res.status(400).json({ error: "Missing ScrapingRobot API Key" });
       const results = [];
-      
       for (let i = 0; i < keywords.length; i++) {
         const keyword = keywords[i];
         try {
           console.log(`[/run-direct] Checking "${keyword}" via ScrapingRobot...`);
           const rank = await scrapeGoogleDeep(keyword, domain.trim(), scrapingRobotKey);
-          console.log(`[/run-direct]   → rank: ${rank}`);
           results.push({ keyword, rank });
         } catch (err) {
-          console.error(`[/run-direct] Error for "${keyword}" (ScrapingRobot):`, err.message);
           results.push({ keyword, rank: "error", detail: err.message });
         }
       }
       return res.json(results);
     }
 
-    // Fallback: standard multi-API routing
-    if (!api_keys || typeof api_keys !== "object") {
-      return res.status(400).json({ error: "Missing API keys" });
-    }
+    if (!api_keys || typeof api_keys !== "object") return res.status(400).json({ error: "Missing API keys" });
 
     const safeApiKeys = {
       serper:      api_keys.serper      ?? "",
@@ -417,40 +320,52 @@ router.post("/run-direct", async (req, res) => {
 
     const candidates = buildCandidates(safeApiKeys);
     if (candidates.length === 0) {
-      return res.status(400).json({
-        error: "Please provide at least one API key (Serper, SearchAPI, SerpStack, Zenserp, SerpHouse, SerpAPI, or Scrape.do)"
-      });
+      return res.status(400).json({ error: "Please provide at least one API key" });
     }
 
-    console.log(`[/run-direct] Using APIs: ${candidates.map(c => c.name).join(", ")}`);
-
     const results = [];
+    let candidateIndex = 0;
 
     for (let i = 0; i < keywords.length; i++) {
       const keyword = keywords[i];
-      const candidate = candidates[i % candidates.length];
+      let success = false;
+      let lastError = null;
 
-      try {
-        console.log(`[/run-direct] Checking "${keyword}" via ${candidate.name}...`);
-        const data = await candidate.fn(keyword, candidate.key);
-        const rank = findRank(data, domain.trim());
-        console.log(`[/run-direct]   → rank: ${rank}`);
-        results.push({ keyword, rank });
+      for (let attempt = 0; attempt < candidates.length; attempt++) {
+        const candidate = candidates[candidateIndex % candidates.length];
+        candidateIndex++;
 
-        // Polite delay between requests to avoid rate limiting
-        if (i < keywords.length - 1) {
-          await new Promise(r => setTimeout(r, 800));
+        try {
+          console.log(`[/run-direct] Checking "${keyword}" via ${candidate.name} (Attempt ${attempt + 1}/${candidates.length})...`);
+          
+          // API returns the rank INT or 'Not Found' immediately via Early Exit
+          const rank = await candidate.fn(keyword, candidate.key, domain.trim());
+          
+          console.log(`[/run-direct]   → Rank: ${rank}`);
+          results.push({ keyword, rank });
+          success = true;
+
+          if (i < keywords.length - 1) {
+             await new Promise(r => setTimeout(r, 2500));
+          }
+          break;
+        } catch (err) {
+          console.error(`[/run-direct] Error for "${keyword}" (${candidate.name}):`, err.message);
+          lastError = err.message;
+          if (attempt < candidates.length - 1) {
+            console.log(`[/run-direct] Failing over to next API...`);
+            await new Promise(r => setTimeout(r, 2500));
+          }
         }
-      } catch (err) {
-        console.error(`[/run-direct] Error for "${keyword}" (${candidate.name}):`, err.message);
-        results.push({ keyword, rank: "error", detail: err.message });
+      }
+
+      if (!success) {
+        results.push({ keyword, rank: "error", detail: lastError });
       }
     }
 
     res.json(results);
-
   } catch (err) {
-    console.error("[/run-direct] Unexpected error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
